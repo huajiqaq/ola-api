@@ -205,12 +205,6 @@ async function regedit_device() {
             'Content-Type': 'application/json',
             'Accept-Encoding': 'gzip'
         },
-        proxy: {
-            host: 'localhost',
-            port: 8888,
-            protocol: 'http:',
-        }
-
     };
 
     // 发送POST请求
@@ -248,12 +242,6 @@ async function getToken() {
             'Content-Type': 'application/json',
             'Accept-Encoding': 'gzip'
         },
-        proxy: {
-            host: 'localhost',
-            port: 8888,
-            protocol: 'http:',
-        }
-
     };
 
     // 发送POST请求
