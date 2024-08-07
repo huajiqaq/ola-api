@@ -1,23 +1,108 @@
 const CryptoJS = require('crypto-js');
 const axios = require("axios");
+const express = require('express');
+const os = require('os');
+const url = require('url');
 
 
+function getLocalIp() {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+        for (const interface of interfaces[name]) {
+            const { address, family, internal } = interface;
+            if (family === 'IPv4' && !internal) {
+                return address;
+            }
+        }
+    }
+    return null;
+}
+
+const localIp = getLocalIp();
+const app = express();
+
+
+app.use(express.json())
+
+app.use(express.urlencoded({ extended: true }));
+
+app.use(function (req, res, next) {
+    const rawHeaders = req.rawHeaders;
+    const headers = {};
+
+    // 将 rawHeaders 数组转换成键值对形式的对象
+    for (let i = 0; i < rawHeaders.length; i += 2) {
+        // 注意这里我们保持原始的大小写和连字符分隔
+        headers[rawHeaders[i]] = rawHeaders[i + 1];
+    }
+
+    // 添加一个属性到请求对象中，以保存原始的headers
+    req.rawHeadersObject = headers;
+
+    next();
+});
+
+// 代理所有请求到目标API
+app.all('/api*', async (req, res) => {
+    try {
+        // 构建完整的目标URL
+        let targetUrl = req.path.substring(5); // "/api/"的长度是5
+
+        const params = {
+            method: req.method,
+            url: targetUrl,
+            data: req.body,
+            params: req.query,
+            headers: req.rawHeadersObject,
+        }
+
+        if (targetUrl.includes("micro/findMicro")) {
+            const myurl = url.parse(req.url.substring(5), true);
+            const time = base64Decode(params.headers.OlaSign2).split(":")[0]
+            const key = getKey(time)
+            const json = JSON.parse(decrypt(myurl.query.olaParams, key))
+            console.log(decrypt(myurl.query.olaParams, key))
+            json.deviceId = deviceid
+            params.params.olaParams = encrypt(JSON.stringify(json), key)
+            token = await getToken()
+            console.log(token)
+            params.headers.Authorization = token
+            params.params.olaParams = getolaParams(JSON.stringify(json))
+            params.headers.OlaSign2 = getOlaSign2()
+        }
+
+        // 转发请求到目标API
+        const response = await axios(params);
+
+        // 转发响应状态码和数据
+        res.status(response.status).json(response.data);
+    } catch (error) {
+        console.error('Proxy error:', error);
+        res.status(500).send('An error occurred while proxying the request.');
+    }
+});
+
+// 启动服务器
+app.listen(3000, () => {
+    console.log(`Proxy server listening at  ${localIp}:3000`);
+});
+
+apiurl = "https://app.ola100.com"
 appid = "__UNI__B830AC1"
 olaSignKey = "ola100-ola101.ola102_ola103"
 Version = "2.61.0"
 VersionCode = 26100
 channel = "yingykngbao-tf"
+
+var token = ""
 const uuidv4 = () => ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
-uuid = uuidv4()
-
-brand = "samsung"
-model = "SM-G9600"
-osVersion = "10"
-osAndroidAPILevel = 29
-ua = "Mozilla/5.0 (Linux; Android 10; SM-G9600 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.135 Mobile Safari/537.36 uni-app (Immersed/24.0)"
-
-apiurl = "https://app.ola100.com"
+var deviceid
+var uuid
+var brand
+var model
+var osVersion
+var osAndroidAPILevel
+var ua
 
 safeArea = {
     left: 0,
@@ -71,13 +156,16 @@ function md5(str) {
 let time
 
 function getTime() {
-    time=(new Date).getTime() + ""
+    time = (new Date).getTime() + ""
     return time
 }
 
-function getKey() {
-    time = getTime()
-    key = (time + appid).substring(0, 16);
+function getKey(timestamp) {
+    // timestamp为毫秒的
+    if (timestamp == null) {
+        timestamp = getTime()
+    }
+    key = (timestamp + appid).substring(0, 16);
     return key
 }
 
@@ -165,18 +253,28 @@ clientInfo = {
     appkey: "bBzveDr7Y1ACEiqVVztmW7"
 }
 
+
 function getolaParams(str) {
     let key = getKey()
     return encrypt(str, key)
 }
 
 function base64Encode(str) {
-    return CryptoJS.enc.Utf8.parse(str).toString(CryptoJS.enc.Base64);
+    return CryptoJS.enc.Base64.stringify(CryptoJS.enc.Utf8.parse(str));
 }
 
-function getOlaSign2() {
+function base64Decode(str) {
+    const bytes = CryptoJS.enc.Base64.parse(str);
+    const utf8String = CryptoJS.enc.Utf8.stringify(bytes);
+    return utf8String.toString();
+}
+
+function getOlaSign2(mytoken) {
+    if (mytoken == null) {
+        mytoken = token
+    }
     // APPINFO等同于 uniapp的 plus.runtime 对象
-    sign2 = md5(olaSignKey + appid + time + channel + VersionCode)
+    sign2 = md5(olaSignKey + appid + time + channel + VersionCode + mytoken)
     OlaSign2 = base64Encode(time + ":" + channel + ":" + VersionCode + ":" + sign2);
     return OlaSign2
 }
@@ -184,7 +282,6 @@ function getOlaSign2() {
 
 async function regedit_device() {
 
-    url = apiurl + '/v3/device/activate';
     data = {
         olaParams: getolaParams(JSON.stringify({
             systemInfo: systemInfo,
@@ -205,12 +302,13 @@ async function regedit_device() {
             'Content-Type': 'application/json',
             'Accept-Encoding': 'gzip'
         },
+
     };
 
     // 发送POST请求
-    await axios.post(url, data, config)
+    await axios.post(apiurl + '/v3/device/activate', data, config)
         .then(response => {
-            console.log(response.data); // 打印响应数据
+            console.log(response.data);
         })
         .catch(error => {
             console.error('Error:', error.response ? error.response.data : error.message);
@@ -219,8 +317,17 @@ async function regedit_device() {
 
 
 async function getToken() {
+    token = ""
+    deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+    uuid = uuidv4()
+    brand = "samsung"
+    model = "SM-G9600"
+    osVersion = "10"
+    osAndroidAPILevel = 29
+    ua = "Mozilla/5.0 (Linux; Android 10; SM-G9600 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.135 Mobile Safari/537.36 uni-app (Immersed/24.0)"
+
     await regedit_device()
-    url = apiurl + '/v3/login/visitor';
+
     data = {
         olaParams: getolaParams(JSON.stringify({
             systemInfo: systemInfo,
@@ -242,16 +349,17 @@ async function getToken() {
             'Content-Type': 'application/json',
             'Accept-Encoding': 'gzip'
         },
+
     };
 
-    // 发送POST请求
-    axios.post(url, data, config)
-        .then(response => {
-            console.log(response.data); // 打印响应数据
-        })
-        .catch(error => {
-            console.error('Error:', error.response ? error.response.data : error.message);
-        });
+    try {
+        const response = await axios.post(apiurl + '/v3/login/visitor', data, config);
+        token = response.data.data.userAuth
+        return token
+    } catch (error) {
+        // 你可以选择抛出错误，或者返回一个错误对象
+        throw error.response ? error.response.data : { error: error.message };
+    }
 }
 
-getToken()
+//getToken()
