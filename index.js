@@ -32,8 +32,8 @@ app.use(function (req, res, next) {
 
     // 将 rawHeaders 数组转换成键值对形式的对象
     for (let i = 0; i < rawHeaders.length; i += 2) {
-        const key = rawHeaders[i].toLowerCase();
-        if (key !== 'host') { // 如果不是'host'头部，则添加到对象中
+        const key = rawHeaders[i]
+        if (key.toLowerCase() !== 'host') { // 如果不是'host'头部，则添加到对象中
             headers[key] = req.rawHeaders[i + 1];
         }
     }
@@ -63,7 +63,6 @@ app.all('/api*', async (req, res) => {
             const time = base64Decode(params.headers.OlaSign2).split(":")[0]
             const key = getKey(time)
             const json = JSON.parse(decrypt(myurl.query.olaParams, key))
-            console.log(decrypt(myurl.query.olaParams, key))
             json.deviceId = deviceid
             params.params.olaParams = encrypt(JSON.stringify(json), key)
             token = await getToken()
