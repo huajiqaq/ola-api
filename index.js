@@ -105,11 +105,12 @@ Version = "2.61.0"
 VersionCode = 26100
 channel = "yingykngbao-tf"
 
-var token = ""
 const uuidv4 = () => ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
 
-var deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
-var uuid = uuidv4()
+var token = ""
+var deviceid = ""
+var uuid = ""
+
 var brand = "samsung"
 var model = "SM-G9600"
 var osVersion = "10"
@@ -331,6 +332,9 @@ async function regedit_device() {
 
 async function getToken() {
     token = ""
+    deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+    systemInfo.deviceId = deviceid
+    deviceInfo.uuid = uuidv4()
 
     await regedit_device()
 
