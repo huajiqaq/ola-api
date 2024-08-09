@@ -32,8 +32,10 @@ app.use(function (req, res, next) {
 
     // 将 rawHeaders 数组转换成键值对形式的对象
     for (let i = 0; i < rawHeaders.length; i += 2) {
-        // 注意这里我们保持原始的大小写和连字符分隔
-        headers[rawHeaders[i]] = rawHeaders[i + 1];
+        const key = rawHeaders[i].toLowerCase();
+        if (key !== 'host') { // 如果不是'host'头部，则添加到对象中
+            headers[key] = req.rawHeaders[i + 1];
+        }
     }
 
     // 添加一个属性到请求对象中，以保存原始的headers
