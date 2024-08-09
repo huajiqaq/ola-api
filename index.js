@@ -74,6 +74,16 @@ app.all('/api*', async (req, res) => {
         // 转发请求到目标API
         const response = await axios(params);
 
+        if (targetUrl.includes("user/information")) {
+            try {
+                response.data.data.memberInfoSubjectInfoList.forEach(element => {
+                    element.getIsMember = 1
+                });
+            } catch (e) {
+                console.log("fail", e)
+            }
+        }
+
         // 转发响应状态码和数据
         res.status(response.status).json(response.data);
     } catch (error) {
@@ -96,13 +106,15 @@ channel = "yingykngbao-tf"
 
 var token = ""
 const uuidv4 = () => ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-var deviceid
-var uuid
-var brand
-var model
-var osVersion
-var osAndroidAPILevel
-var ua
+
+var deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+var uuid = uuidv4()
+var brand = "samsung"
+var model = "SM-G9600"
+var osVersion = "10"
+var osAndroidAPILevel = 29
+var ua = "Mozilla/5.0 (Linux; Android 10; SM-G9600 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.135 Mobile Safari/537.36 uni-app (Immersed/24.0)"
+
 
 safeArea = {
     left: 0,
@@ -318,13 +330,6 @@ async function regedit_device() {
 
 async function getToken() {
     token = ""
-    deviceid = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
-    uuid = uuidv4()
-    brand = "samsung"
-    model = "SM-G9600"
-    osVersion = "10"
-    osAndroidAPILevel = 29
-    ua = "Mozilla/5.0 (Linux; Android 10; SM-G9600 Build/QP1A.190711.020; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/126.0.6478.135 Mobile Safari/537.36 uni-app (Immersed/24.0)"
 
     await regedit_device()
 
