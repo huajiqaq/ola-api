@@ -17,3 +17,7 @@ http://192.168.31.28:3000/api/*
 ^https://event.ola100.com/*
 
 http://192.168.31.28:3000/api/*
+
+## 演示视频
+
+https://share.weiyun.com/qi1mr1Im
